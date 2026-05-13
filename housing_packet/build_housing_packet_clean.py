@@ -287,7 +287,7 @@ def explanation(c: canvas.Canvas) -> None:
         draw_text(c, body, x + 82, bullet_y - 19, col_w - 96, size=8.8, leading=10.7, max_lines=3)
 
     table_y = y - 166
-    panel(c, M, table_y - 130, PAGE_W - 2 * M, 120, fill=PANEL, stroke=LINE, radius=10)
+    panel(c, M, table_y - 162, PAGE_W - 2 * M, 152, fill=PANEL, stroke=LINE, radius=10)
     c.setFillColor(INK)
     c.setFont("Helvetica-Bold", 14)
     c.drawString(M + 16, table_y - 35, "Budget reality")
@@ -343,15 +343,6 @@ def listing_page(c: canvas.Canvas, page: int, section: str, title: str, subtitle
     for idx, item in enumerate(items[:4]):
         x, y0 = slots[idx]
         compact_listing_card(c, item, imgs[item.slug], x, y0, card_w, card_h, accent)
-    if len(items) < 4:
-        extras = [
-            ("No overflow rule", "Every text field on this page is capped to a fixed number of lines. If a detail does not fit, it belongs on the site or source link, not inside the PDF card."),
-            ("Next action", "Message the strongest leads first, then use the site grid for backups and source links. Confirm cat, utilities, laundry, parking, and yard access before touring."),
-        ]
-        for idx in range(len(items), 4):
-            x, y0 = slots[idx]
-            insight = extras[idx - len(items)]
-            insight_card(c, insight[0], insight[1], x, y0, card_w, card_h, fill, accent)
     footer(c, "Listing images: sources named in text; current availability not guaranteed")
     c.showPage()
 
