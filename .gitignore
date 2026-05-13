@@ -1,0 +1,8 @@
+housing_packet/qa/
+__pycache__/
+housing_packet/__pycache__/
+.vercel/
+node_modules/
+dist/
+.DS_Store
+Thumbs.db
