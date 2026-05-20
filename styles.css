@@ -128,6 +128,186 @@ main {
   line-height: 1.4;
 }
 
+.calculator {
+  margin: 0 0 32px;
+}
+
+.caution-panel,
+.assumptions-panel,
+.summary-card,
+.warning-list {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.caution-panel {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 14px;
+  color: #44341e;
+  background: var(--soft-amber);
+  line-height: 1.4;
+}
+
+.caution-panel strong {
+  color: var(--ink);
+}
+
+.source-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.calculator-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, .95fr) minmax(360px, 1.25fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.assumptions-panel {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+fieldset {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.assumptions-panel label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.assumptions-panel label span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.assumptions-panel input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 750;
+}
+
+.field-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.calculator-output {
+  display: grid;
+  gap: 14px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.summary-card {
+  min-width: 0;
+  padding: 16px;
+}
+
+.summary-card.balanced {
+  border-color: #b7c9bd;
+  background: var(--soft-green);
+}
+
+.summary-card span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.summary-card strong {
+  display: block;
+  margin: 6px 0;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.summary-card p,
+.warning-list p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.warning-list {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.calculator-table {
+  margin-top: 14px;
+}
+
+th button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.balanced-row {
+  background: #eef7f0;
+}
+
+.positive {
+  color: var(--green);
+  font-weight: 850;
+}
+
+.negative {
+  color: #8b3d23;
+  font-weight: 850;
+}
+
 .controls {
   position: sticky;
   top: 0;
@@ -335,6 +515,12 @@ td {
   }
 
   .decision-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .calculator-layout,
+  .summary-grid,
+  fieldset {
     grid-template-columns: 1fr;
   }
 }

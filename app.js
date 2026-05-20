@@ -30,6 +30,208 @@ let activeFilter = "all";
 const grid = document.querySelector("#listingGrid");
 const table = document.querySelector("#listingTable");
 const shortlistOnly = document.querySelector("#shortlistOnly");
+const rentInputs = [
+  "mortgagePayment",
+  "mortgageInterest",
+  "mortgagePrincipal",
+  "propertyTax",
+  "insurance",
+  "maintenanceFees",
+  "repairsReserve",
+  "utilities",
+  "otherExpenses",
+  "bPaysH",
+  "fairMarketRent",
+  "rentMin",
+  "rentMax",
+  "rentStep"
+];
+const rentSummary = document.querySelector("#rentSummary");
+const rentWarnings = document.querySelector("#rentWarnings");
+const rentScenarioTable = document.querySelector("#rentScenarioTable");
+const mortgageSplitNote = document.querySelector("#mortgageSplitNote");
+let rentSort = { key: "rent", direction: "asc" };
+
+const currency = new Intl.NumberFormat("en-CA", {
+  style: "currency",
+  currency: "CAD",
+  maximumFractionDigits: 0
+});
+
+function money(value) {
+  return currency.format(Math.round(value));
+}
+
+function numberValue(id) {
+  const input = document.querySelector(`#${id}`);
+  if (!input) return 0;
+  const value = Number(input.value);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function calculatorAssumptions() {
+  const assumptions = {
+    mortgagePayment: Math.max(0, numberValue("mortgagePayment")),
+    mortgageInterest: Math.max(0, numberValue("mortgageInterest")),
+    mortgagePrincipal: Math.max(0, numberValue("mortgagePrincipal")),
+    propertyTax: Math.max(0, numberValue("propertyTax")),
+    insurance: Math.max(0, numberValue("insurance")),
+    maintenanceFees: Math.max(0, numberValue("maintenanceFees")),
+    repairsReserve: Math.max(0, numberValue("repairsReserve")),
+    utilities: Math.max(0, numberValue("utilities")),
+    otherExpenses: Math.max(0, numberValue("otherExpenses")),
+    bPaysH: Math.max(0, numberValue("bPaysH")),
+    fairMarketRent: Math.max(0, numberValue("fairMarketRent")),
+    rentMin: clamp(numberValue("rentMin"), 0, 4000),
+    rentMax: clamp(numberValue("rentMax"), 0, 4000),
+    rentStep: clamp(numberValue("rentStep"), 25, 1000)
+  };
+
+  if (assumptions.rentMin > assumptions.rentMax) {
+    [assumptions.rentMin, assumptions.rentMax] = [assumptions.rentMax, assumptions.rentMin];
+  }
+
+  assumptions.deductibleExpenses =
+    assumptions.mortgageInterest +
+    assumptions.propertyTax +
+    assumptions.insurance +
+    assumptions.maintenanceFees +
+    assumptions.repairsReserve +
+    assumptions.utilities +
+    assumptions.otherExpenses;
+  assumptions.cashCarryingCosts =
+    assumptions.mortgagePayment +
+    assumptions.propertyTax +
+    assumptions.insurance +
+    assumptions.maintenanceFees +
+    assumptions.repairsReserve +
+    assumptions.utilities +
+    assumptions.otherExpenses;
+  return assumptions;
+}
+
+function riskFlag(row, assumptions) {
+  const flags = [];
+  if (assumptions.fairMarketRent > 0 && row.rent < assumptions.fairMarketRent * 0.9) {
+    flags.push("Below fair-market risk");
+  } else if (assumptions.fairMarketRent > 0 && row.rent < assumptions.fairMarketRent) {
+    flags.push("Near/below fair market");
+  }
+  if (row.netRental < 0) flags.push("Rental loss shown");
+  if (row.hNetCost < 0) flags.push("H net-negative");
+  return flags.length ? flags.join(" + ") : "No model flag";
+}
+
+function balanceScore(rent, netRental, bCashFlow, assumptions) {
+  const maxRent = Math.max(assumptions.rentMax, 1);
+  const incomeSignal = rent / maxRent;
+  const lossSignal = netRental < 0 ? clamp(Math.abs(netRental) / Math.max(assumptions.deductibleExpenses, 1), 0, 1) : 0;
+  const fairMarketSignal = assumptions.fairMarketRent > 0
+    ? clamp(rent / assumptions.fairMarketRent, 0, 1)
+    : 1;
+  const cashSignal = 1 - clamp(Math.abs(Math.min(bCashFlow, 0)) / Math.max(assumptions.cashCarryingCosts, 1), 0, 1);
+  return (incomeSignal * 45) + (lossSignal * 25) + (fairMarketSignal * 20) + (cashSignal * 10);
+}
+
+function buildRentScenarios(assumptions) {
+  const rows = [];
+  const step = Math.max(assumptions.rentStep, 25);
+  for (let rent = assumptions.rentMin; rent <= assumptions.rentMax; rent += step) {
+    const grossIncome = rent;
+    const netRental = grossIncome - assumptions.deductibleExpenses;
+    const bCashFlow = grossIncome - assumptions.bPaysH - assumptions.cashCarryingCosts;
+    const hNetCost = rent - assumptions.bPaysH;
+    const loanScore = Math.round((grossIncome / 4000) * 100);
+    const balance = balanceScore(rent, netRental, bCashFlow, assumptions);
+    rows.push({
+      rent,
+      grossIncome,
+      netRental,
+      bCashFlow,
+      hNetCost,
+      loanScore,
+      balance,
+      risk: "",
+      annualIncome: grossIncome * 12,
+      annualProfitLoss: netRental * 12
+    });
+  }
+  return rows.map((row) => ({ ...row, risk: riskFlag(row, assumptions) }));
+}
+
+function scenarioBy(rows, compare) {
+  return rows.reduce((best, row) => (compare(row, best) ? row : best), rows[0]);
+}
+
+function sortedRows(rows) {
+  const direction = rentSort.direction === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    if (a[rentSort.key] < b[rentSort.key]) return -1 * direction;
+    if (a[rentSort.key] > b[rentSort.key]) return 1 * direction;
+    return a.rent - b.rent;
+  });
+}
+
+function renderSummaryCard(label, row, detail, className = "") {
+  return `
+    <article class="summary-card ${className}">
+      <span>${label}</span>
+      <strong>${money(row.rent)}</strong>
+      <p>${detail}</p>
+    </article>
+  `;
+}
+
+function renderRentCalculator() {
+  if (!rentSummary || !rentScenarioTable) return;
+  const assumptions = calculatorAssumptions();
+  const rows = buildRentScenarios(assumptions);
+  const lowestRent = scenarioBy(rows, (row, best) => row.rent < best.rent);
+  const highestIncome = scenarioBy(rows, (row, best) => row.grossIncome > best.grossIncome);
+  const biggestLoss = scenarioBy(rows, (row, best) => row.netRental < best.netRental);
+  const balanced = scenarioBy(rows, (row, best) => row.balance > best.balance);
+  const lossRows = rows.filter((row) => row.netRental < 0).length;
+  const belowMarketRows = rows.filter((row) => assumptions.fairMarketRent > 0 && row.rent < assumptions.fairMarketRent).length;
+  const hNegativeRows = rows.filter((row) => row.hNetCost < 0).length;
+
+  const splitDifference = assumptions.mortgagePayment - assumptions.mortgageInterest - assumptions.mortgagePrincipal;
+  mortgageSplitNote.textContent = splitDifference === 0
+    ? "Mortgage payment equals interest plus principal in this example."
+    : `Mortgage split differs from payment by ${money(splitDifference)}; cash flow uses the full mortgage payment.`;
+
+  rentSummary.innerHTML = [
+    renderSummaryCard("Lowest rent", lowestRent, `${money(lowestRent.netRental)} rental result before tax.`),
+    renderSummaryCard("Highest income", highestIncome, `${money(highestIncome.annualIncome)} annual gross rent.`),
+    renderSummaryCard("Biggest loss", biggestLoss, `${money(biggestLoss.annualProfitLoss)} annual profit/loss before tax.`),
+    renderSummaryCard("Balanced heuristic", balanced, `Score ${Math.round(balanced.balance)} / 100 from income, loss signal, fair-market gap, and B cash flow.`, "balanced")
+  ].join("");
+
+  rentWarnings.innerHTML = [
+    `${lossRows} of ${rows.length} scenarios show a rental loss before tax.`,
+    belowMarketRows
+      ? `${belowMarketRows} scenarios are below the fair-market estimate and should be reviewed before relying on loss treatment.`
+      : "No scenarios are below the fair-market estimate entered here.",
+    hNegativeRows
+      ? `${hNegativeRows} scenarios show H net cost below zero because B pays H more than rent.`
+      : "B-to-H payment is modeled separately from rent and does not change reported gross rent."
+  ].map((warning) => `<p>${warning}</p>`).join("");
+
+  rentScenarioTable.innerHTML = sortedRows(rows).map((row) => `
+    <tr class="${row.rent === balanced.rent ? "balanced-row" : ""}">
+      <td><strong>${money(row.rent)}</strong><br><span class="source">${row.rent === balanced.rent ? "balanced heuristic" : "scenario"}</span></td>
+      <td>${money(row.grossIncome)}<br><span class="source">${money(row.annualIncome)} / year</span></td>
+      <td class="${row.netRental < 0 ? "negative" : "positive"}">${money(row.netRental)}<br><span class="source">${money(row.annualProfitLoss)} / year</span></td>
+      <td class="${row.bCashFlow < 0 ? "negative" : "positive"}">${money(row.bCashFlow)}</td>
+      <td class="${row.hNetCost < 0 ? "positive" : ""}">${money(row.hNetCost)}</td>
+      <td>${row.loanScore} / 100<br><span class="source">gross-rent indicator</span></td>
+      <td>${row.risk}</td>
+    </tr>
+  `).join("");
+}
 
 function tagClass(scenario) {
   if (scenario === "2-person") return "two";
@@ -85,6 +287,23 @@ document.querySelectorAll("[data-filter]").forEach((button) => {
   });
 });
 
+rentInputs.forEach((id) => {
+  const input = document.querySelector(`#${id}`);
+  if (input) input.addEventListener("input", renderRentCalculator);
+});
+
+document.querySelectorAll("[data-rent-sort]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const key = button.dataset.rentSort;
+    rentSort = {
+      key,
+      direction: rentSort.key === key && rentSort.direction === "asc" ? "desc" : "asc"
+    };
+    renderRentCalculator();
+  });
+});
+
 shortlistOnly.addEventListener("change", render);
 document.querySelector("#printBtn").addEventListener("click", () => window.print());
+renderRentCalculator();
 render();

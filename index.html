@@ -11,7 +11,7 @@
       <div>
         <p class="label">Updated May 13, 2026</p>
         <h1>BioScript Mississauga Housing Packet</h1>
-        <p class="subtitle">A dense, practical comparison of solo, brother-share, and brother + cousin housing options near Ridgeway/Dunwin.</p>
+        <p class="subtitle">A dense, practical comparison of housing options near Ridgeway/Dunwin, plus an editable rent scenario calculator for owner/renter planning.</p>
       </div>
       <div class="header-actions">
         <a class="button" href="./housing_packet/BioScript_Housing_Decision_Packet.pdf">Open PDF</a>
@@ -36,6 +36,126 @@
           <strong>$1,200 means shared-house territory</strong>
           <p>Keep solo only for unusually strong cat-friendly room/basement leads.</p>
         </article>
+      </section>
+
+      <section class="calculator" aria-labelledby="calculatorTitle">
+        <div class="section-heading">
+          <div>
+            <p class="label">Synthetic example defaults</p>
+            <h2 id="calculatorTitle">Rent scenario calculator</h2>
+          </div>
+          <p>Models B as property owner and H as renter. B pays H separately; H pays rent back to B.</p>
+        </div>
+
+        <div class="caution-panel" role="note">
+          <strong>Planning math only.</strong>
+          <span>Tax-loss treatment and loan qualification can depend on fair-market rent, relationship facts, lender policy, and professional review. CRA guidance warns that below-market rentals to someone known to the owner may limit rental-loss claims.</span>
+          <div class="source-links">
+            <a href="https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/rental-income/rental-losses.html">CRA rental losses</a>
+            <a href="https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/rental-income/renting-below-fair-market-value.html">CRA below fair-market rent</a>
+            <a href="https://www.canada.ca/en/revenue-agency/services/forms-publications/publications/t4036/rental-income.html">CRA rental income guide</a>
+          </div>
+        </div>
+
+        <div class="calculator-layout">
+          <form class="assumptions-panel" id="rentAssumptions" aria-label="Calculator assumptions">
+            <fieldset>
+              <legend>Mortgage split</legend>
+              <label>
+                <span>Monthly mortgage payment</span>
+                <input id="mortgagePayment" type="number" min="0" step="50" value="4000" />
+              </label>
+              <label>
+                <span>Mortgage interest</span>
+                <input id="mortgageInterest" type="number" min="0" step="50" value="2800" />
+              </label>
+              <label>
+                <span>Non-deductible principal</span>
+                <input id="mortgagePrincipal" type="number" min="0" step="50" value="1200" />
+              </label>
+              <p class="field-note" id="mortgageSplitNote"></p>
+            </fieldset>
+
+            <fieldset>
+              <legend>Monthly carrying costs</legend>
+              <label>
+                <span>Property tax</span>
+                <input id="propertyTax" type="number" min="0" step="25" value="450" />
+              </label>
+              <label>
+                <span>Insurance</span>
+                <input id="insurance" type="number" min="0" step="25" value="120" />
+              </label>
+              <label>
+                <span>Maintenance / condo fees</span>
+                <input id="maintenanceFees" type="number" min="0" step="25" value="350" />
+              </label>
+              <label>
+                <span>Repairs reserve</span>
+                <input id="repairsReserve" type="number" min="0" step="25" value="250" />
+              </label>
+              <label>
+                <span>Utilities</span>
+                <input id="utilities" type="number" min="0" step="25" value="220" />
+              </label>
+              <label>
+                <span>Other deductible costs</span>
+                <input id="otherExpenses" type="number" min="0" step="25" value="100" />
+              </label>
+            </fieldset>
+
+            <fieldset>
+              <legend>Relationship cash flows</legend>
+              <label>
+                <span>B pays H</span>
+                <input id="bPaysH" type="number" min="0" step="50" value="500" />
+              </label>
+              <label>
+                <span>Fair-market rent estimate</span>
+                <input id="fairMarketRent" type="number" min="0" step="100" value="3200" />
+              </label>
+            </fieldset>
+
+            <fieldset>
+              <legend>Scenario range</legend>
+              <label>
+                <span>Minimum rent</span>
+                <input id="rentMin" type="number" min="0" max="4000" step="100" value="0" />
+              </label>
+              <label>
+                <span>Maximum rent</span>
+                <input id="rentMax" type="number" min="0" max="4000" step="100" value="4000" />
+              </label>
+              <label>
+                <span>Rent step</span>
+                <input id="rentStep" type="number" min="25" max="1000" step="25" value="100" />
+              </label>
+              <p class="field-note">Scenario rent is capped at CAD 0-4,000/month.</p>
+            </fieldset>
+          </form>
+
+          <div class="calculator-output">
+            <div class="summary-grid" id="rentSummary" aria-live="polite"></div>
+            <div class="warning-list" id="rentWarnings" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <div class="table-wrap calculator-table">
+          <table>
+            <thead>
+              <tr>
+                <th><button data-rent-sort="rent" type="button">Rent</button></th>
+                <th><button data-rent-sort="grossIncome" type="button">Gross income</button></th>
+                <th><button data-rent-sort="netRental" type="button">Rental profit/loss</button></th>
+                <th><button data-rent-sort="bCashFlow" type="button">B net cash flow</button></th>
+                <th><button data-rent-sort="hNetCost" type="button">H net cost</button></th>
+                <th><button data-rent-sort="loanScore" type="button">Loan-usefulness score</button></th>
+                <th>Risk flag</th>
+              </tr>
+            </thead>
+            <tbody id="rentScenarioTable"></tbody>
+          </table>
+        </div>
       </section>
 
       <section class="controls" aria-label="Listing filters">
