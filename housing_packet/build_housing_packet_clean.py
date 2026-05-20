@@ -41,6 +41,7 @@ def lines_for(text: str, font: str, size: float, width: float, max_lines: int | 
     words = text.replace("\n", " ").split()
     lines: list[str] = []
     current = ""
+    truncated = False
     for word in words:
         test = word if not current else f"{current} {word}"
         if text_width(test, font, size) <= width:
@@ -50,10 +51,11 @@ def lines_for(text: str, font: str, size: float, width: float, max_lines: int | 
             lines.append(current)
         current = word
         if max_lines and len(lines) == max_lines:
+            truncated = True
             break
     if current and (not max_lines or len(lines) < max_lines):
         lines.append(current)
-    if max_lines and len(lines) == max_lines:
+    if max_lines and len(lines) == max_lines and truncated:
         while lines and text_width(lines[-1] + "...", font, size) > width:
             lines[-1] = " ".join(lines[-1].split()[:-1])
         lines[-1] = lines[-1].rstrip(".,;:") + "..."
