@@ -209,7 +209,8 @@ legend {
   font-weight: 800;
 }
 
-.assumptions-panel input {
+.assumptions-panel input,
+.assumptions-panel select {
   width: 100%;
   min-width: 0;
   border: 1px solid var(--line);
@@ -245,9 +246,27 @@ legend {
   padding: 16px;
 }
 
-.summary-card.balanced {
-  border-color: #b7c9bd;
-  background: var(--soft-green);
+.summary-card.critical-risk,
+.critical-row {
+  border-color: #d49a81;
+  background: #fff1ec;
+}
+
+.summary-card.high-risk,
+.high-row {
+  border-color: #d7b46c;
+  background: #fff8e9;
+}
+
+.summary-card.review-risk,
+.review-row {
+  border-color: #c8d2d7;
+  background: #f4f8fa;
+}
+
+.summary-card.neutral,
+.neutral-row {
+  background: #fff;
 }
 
 .summary-card span {
@@ -282,6 +301,20 @@ legend {
   margin-top: 14px;
 }
 
+.calculator-table th:first-child,
+.calculator-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: inherit;
+  box-shadow: 1px 0 0 var(--line);
+}
+
+.calculator-table th:first-child {
+  z-index: 3;
+  background: var(--panel);
+}
+
 th button {
   border: 0;
   padding: 0;
@@ -294,8 +327,10 @@ th button {
   cursor: pointer;
 }
 
-.balanced-row {
-  background: #eef7f0;
+th button.sort-active {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .positive {
@@ -306,6 +341,42 @@ th button {
 .negative {
   color: #8b3d23;
   font-weight: 850;
+}
+
+.risk-emphasis {
+  color: #8b3d23;
+  font-weight: 850;
+}
+
+.risk-badge {
+  display: inline-block;
+  margin-bottom: 5px;
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.risk-badge.critical {
+  background: #f5c4b4;
+  color: #7d2a18;
+}
+
+.risk-badge.high {
+  background: #f4dfaa;
+  color: #6c470d;
+}
+
+.risk-badge.review {
+  background: #dfe9ed;
+  color: #31525e;
+}
+
+.risk-badge.neutral {
+  background: var(--soft-green);
+  color: var(--green);
 }
 
 .controls {

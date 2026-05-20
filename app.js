@@ -33,15 +33,22 @@ const shortlistOnly = document.querySelector("#shortlistOnly");
 const rentInputs = [
   "mortgagePayment",
   "mortgageInterest",
-  "mortgagePrincipal",
   "propertyTax",
   "insurance",
   "maintenanceFees",
-  "repairsReserve",
+  "actualRepairs",
+  "repairReserve",
+  "capitalRepairs",
   "utilities",
   "otherExpenses",
+  "rentalUsePct",
+  "availableMonths",
+  "ownershipShare",
+  "ownerPaysUtilities",
   "bPaysH",
   "fairMarketRent",
+  "tenantRelationship",
+  "bPaysHPurpose",
   "rentMin",
   "rentMax",
   "rentStep"
@@ -69,6 +76,11 @@ function numberValue(id) {
   return Number.isFinite(value) ? value : 0;
 }
 
+function stringValue(id) {
+  const input = document.querySelector(`#${id}`);
+  return input ? input.value : "";
+}
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -77,15 +89,22 @@ function calculatorAssumptions() {
   const assumptions = {
     mortgagePayment: Math.max(0, numberValue("mortgagePayment")),
     mortgageInterest: Math.max(0, numberValue("mortgageInterest")),
-    mortgagePrincipal: Math.max(0, numberValue("mortgagePrincipal")),
     propertyTax: Math.max(0, numberValue("propertyTax")),
     insurance: Math.max(0, numberValue("insurance")),
     maintenanceFees: Math.max(0, numberValue("maintenanceFees")),
-    repairsReserve: Math.max(0, numberValue("repairsReserve")),
+    actualRepairs: Math.max(0, numberValue("actualRepairs")),
+    repairReserve: Math.max(0, numberValue("repairReserve")),
+    capitalRepairs: Math.max(0, numberValue("capitalRepairs")),
     utilities: Math.max(0, numberValue("utilities")),
     otherExpenses: Math.max(0, numberValue("otherExpenses")),
+    rentalUsePct: clamp(numberValue("rentalUsePct"), 0, 100),
+    availableMonths: clamp(numberValue("availableMonths"), 0, 12),
+    ownershipShare: clamp(numberValue("ownershipShare"), 0, 100),
+    ownerPaysUtilities: stringValue("ownerPaysUtilities") === "yes",
     bPaysH: Math.max(0, numberValue("bPaysH")),
     fairMarketRent: Math.max(0, numberValue("fairMarketRent")),
+    tenantRelationship: stringValue("tenantRelationship") || "unknown",
+    bPaysHPurpose: stringValue("bPaysHPurpose") || "unknown",
     rentMin: clamp(numberValue("rentMin"), 0, 4000),
     rentMax: clamp(numberValue("rentMax"), 0, 4000),
     rentStep: clamp(numberValue("rentStep"), 25, 1000)
@@ -95,72 +114,150 @@ function calculatorAssumptions() {
     [assumptions.rentMin, assumptions.rentMax] = [assumptions.rentMax, assumptions.rentMin];
   }
 
-  assumptions.deductibleExpenses =
+  assumptions.derivedPrincipal = Math.max(0, assumptions.mortgagePayment - assumptions.mortgageInterest);
+  assumptions.inputErrors = [];
+  if (assumptions.mortgageInterest > assumptions.mortgagePayment) {
+    assumptions.inputErrors.push("Mortgage interest cannot exceed the total mortgage payment.");
+  }
+
+  assumptions.taxScale =
+    (assumptions.rentalUsePct / 100) *
+    (assumptions.availableMonths / 12) *
+    (assumptions.ownershipShare / 100);
+  assumptions.eligibleCurrentExpenses =
     assumptions.mortgageInterest +
     assumptions.propertyTax +
     assumptions.insurance +
     assumptions.maintenanceFees +
-    assumptions.repairsReserve +
-    assumptions.utilities +
+    assumptions.actualRepairs +
+    (assumptions.ownerPaysUtilities ? assumptions.utilities : 0) +
     assumptions.otherExpenses;
+  assumptions.taxDeductibleExpenses = assumptions.eligibleCurrentExpenses * assumptions.taxScale;
   assumptions.cashCarryingCosts =
     assumptions.mortgagePayment +
     assumptions.propertyTax +
     assumptions.insurance +
     assumptions.maintenanceFees +
-    assumptions.repairsReserve +
+    assumptions.actualRepairs +
+    assumptions.repairReserve +
+    assumptions.capitalRepairs +
     assumptions.utilities +
     assumptions.otherExpenses;
   return assumptions;
 }
 
-function riskFlag(row, assumptions) {
+function riskModel(row, assumptions) {
   const flags = [];
-  if (assumptions.fairMarketRent > 0 && row.rent < assumptions.fairMarketRent * 0.9) {
-    flags.push("Below fair-market risk");
-  } else if (assumptions.fairMarketRent > 0 && row.rent < assumptions.fairMarketRent) {
-    flags.push("Near/below fair market");
+  let severity = "neutral";
+  let rank = 1;
+  const addFlag = (level, text) => {
+    flags.push(text);
+    const levels = { neutral: 1, review: 2, high: 3, critical: 4 };
+    if (levels[level] > rank) {
+      severity = level;
+      rank = levels[level];
+    }
+  };
+
+  if (assumptions.fairMarketRent <= 0) {
+    addFlag("high", "FMV not entered - market risk not assessed");
+  } else if (row.rent < assumptions.fairMarketRent) {
+    addFlag("high", "Below entered FMV - professional review required");
+  } else if (row.rent === assumptions.fairMarketRent) {
+    addFlag("review", "At entered FMV, assuming supportable comparables");
   }
-  if (row.netRental < 0) flags.push("Rental loss shown");
-  if (row.hNetCost < 0) flags.push("H net-negative");
-  return flags.length ? flags.join(" + ") : "No model flag";
+
+  if (assumptions.bPaysH > 0 && assumptions.bPaysH >= row.rent) {
+    addFlag("critical", "High-risk circular-flow row");
+  }
+
+  if (
+    row.taxProfitLoss < 0 &&
+    row.rent < assumptions.fairMarketRent &&
+    ["known", "related"].includes(assumptions.tenantRelationship)
+  ) {
+    addFlag("critical", "Known/related tenant + below FMV + loss - review required");
+  }
+
+  if (
+    row.taxProfitLoss < 0 &&
+    row.rent < assumptions.fairMarketRent &&
+    assumptions.tenantRelationship === "unknown"
+  ) {
+    addFlag("high", "Unknown relationship + below FMV + loss - review required");
+  }
+
+  if (row.taxProfitLoss < 0) {
+    addFlag("review", "Modelled loss - claimability not determined");
+  }
+
+  if (assumptions.bPaysHPurpose === "rent-subsidy" || assumptions.bPaysHPurpose === "unknown") {
+    addFlag("review", "B-to-H payment purpose needs documentation");
+  }
+
+  return {
+    severity,
+    rank,
+    text: flags.length ? flags.join(" + ") : "No automated flag; review still required"
+  };
 }
 
-function balanceScore(rent, netRental, bCashFlow, assumptions) {
-  const maxRent = Math.max(assumptions.rentMax, 1);
-  const incomeSignal = rent / maxRent;
-  const lossSignal = netRental < 0 ? clamp(Math.abs(netRental) / Math.max(assumptions.deductibleExpenses, 1), 0, 1) : 0;
-  const fairMarketSignal = assumptions.fairMarketRent > 0
-    ? clamp(rent / assumptions.fairMarketRent, 0, 1)
-    : 1;
-  const cashSignal = 1 - clamp(Math.abs(Math.min(bCashFlow, 0)) / Math.max(assumptions.cashCarryingCosts, 1), 0, 1);
-  return (incomeSignal * 45) + (lossSignal * 25) + (fairMarketSignal * 20) + (cashSignal * 10);
+function taxModel(rent, assumptions) {
+  const monthlyProfitLoss = rent - assumptions.taxDeductibleExpenses;
+  return {
+    monthlyEligibleExpenses: assumptions.taxDeductibleExpenses,
+    monthlyProfitLoss,
+    annualProfitLoss: monthlyProfitLoss * 12
+  };
+}
+
+function cashModel(rent, assumptions) {
+  return {
+    bCashFlow: rent - assumptions.bPaysH - assumptions.cashCarryingCosts,
+    hNetCashFlow: assumptions.bPaysH - rent
+  };
+}
+
+function lenderIllustration(rent, monthlyTaxProfitLoss) {
+  const annualGrossRent = rent * 12;
+  return {
+    annualGrossRent,
+    grossRentAddback50: annualGrossRent * 0.5,
+    illustrativeNetRentalIncome: monthlyTaxProfitLoss * 12
+  };
 }
 
 function buildRentScenarios(assumptions) {
-  const rows = [];
+  let rents = [];
   const step = Math.max(assumptions.rentStep, 25);
   for (let rent = assumptions.rentMin; rent <= assumptions.rentMax; rent += step) {
-    const grossIncome = rent;
-    const netRental = grossIncome - assumptions.deductibleExpenses;
-    const bCashFlow = grossIncome - assumptions.bPaysH - assumptions.cashCarryingCosts;
-    const hNetCost = rent - assumptions.bPaysH;
-    const loanScore = Math.round((grossIncome / 4000) * 100);
-    const balance = balanceScore(rent, netRental, bCashFlow, assumptions);
-    rows.push({
-      rent,
-      grossIncome,
-      netRental,
-      bCashFlow,
-      hNetCost,
-      loanScore,
-      balance,
-      risk: "",
-      annualIncome: grossIncome * 12,
-      annualProfitLoss: netRental * 12
-    });
+    rents.push(rent);
   }
-  return rows.map((row) => ({ ...row, risk: riskFlag(row, assumptions) }));
+  if (rents[rents.length - 1] !== assumptions.rentMax) {
+    rents.push(assumptions.rentMax);
+  }
+
+  return rents.map((rent) => {
+    const tax = taxModel(rent, assumptions);
+    const cash = cashModel(rent, assumptions);
+    const lender = lenderIllustration(rent, tax.monthlyProfitLoss);
+    const row = {
+      rent,
+      annualGrossRent: lender.annualGrossRent,
+      taxProfitLoss: tax.monthlyProfitLoss,
+      bCashFlow: cash.bCashFlow,
+      hNetCashFlow: cash.hNetCashFlow,
+      grossRentAddback50: lender.grossRentAddback50,
+      illustrativeNetRentalIncome: lender.illustrativeNetRentalIncome
+    };
+    const risk = riskModel(row, assumptions);
+    return {
+      ...row,
+      risk: risk.text,
+      riskSeverity: risk.severity,
+      riskRank: risk.rank
+    };
+  });
 }
 
 function scenarioBy(rows, compare) {
@@ -176,59 +273,97 @@ function sortedRows(rows) {
   });
 }
 
-function renderSummaryCard(label, row, detail, className = "") {
+function closestRow(rows, score) {
+  return rows.reduce((best, row) => (score(row) < score(best) ? row : best), rows[0]);
+}
+
+function renderSummaryCard(label, value, detail, className = "") {
   return `
     <article class="summary-card ${className}">
       <span>${label}</span>
-      <strong>${money(row.rent)}</strong>
+      <strong>${value}</strong>
       <p>${detail}</p>
     </article>
   `;
 }
 
+function renderInvalidCalculator(assumptions) {
+  mortgageSplitNote.textContent = assumptions.inputErrors.join(" ");
+  rentSummary.innerHTML = `
+    <article class="summary-card critical-risk">
+      <span>Input correction required</span>
+      <strong>Blocked</strong>
+      <p>${assumptions.inputErrors.join(" ")}</p>
+    </article>
+  `;
+  rentWarnings.innerHTML = `<p>${assumptions.inputErrors.join(" ")}</p>`;
+  rentScenarioTable.innerHTML = "";
+}
+
 function renderRentCalculator() {
   if (!rentSummary || !rentScenarioTable) return;
   const assumptions = calculatorAssumptions();
-  const rows = buildRentScenarios(assumptions);
-  const lowestRent = scenarioBy(rows, (row, best) => row.rent < best.rent);
-  const highestIncome = scenarioBy(rows, (row, best) => row.grossIncome > best.grossIncome);
-  const biggestLoss = scenarioBy(rows, (row, best) => row.netRental < best.netRental);
-  const balanced = scenarioBy(rows, (row, best) => row.balance > best.balance);
-  const lossRows = rows.filter((row) => row.netRental < 0).length;
-  const belowMarketRows = rows.filter((row) => assumptions.fairMarketRent > 0 && row.rent < assumptions.fairMarketRent).length;
-  const hNegativeRows = rows.filter((row) => row.hNetCost < 0).length;
+  if (assumptions.inputErrors.length) {
+    renderInvalidCalculator(assumptions);
+    return;
+  }
 
-  const splitDifference = assumptions.mortgagePayment - assumptions.mortgageInterest - assumptions.mortgagePrincipal;
-  mortgageSplitNote.textContent = splitDifference === 0
-    ? "Mortgage payment equals interest plus principal in this example."
-    : `Mortgage split differs from payment by ${money(splitDifference)}; cash flow uses the full mortgage payment.`;
+  const rows = buildRentScenarios(assumptions);
+  const lossRows = rows.filter((row) => row.taxProfitLoss < 0).length;
+  const belowMarketRows = rows.filter((row) => assumptions.fairMarketRent > 0 && row.rent < assumptions.fairMarketRent).length;
+  const circularRows = rows.filter((row) => assumptions.bPaysH > 0 && assumptions.bPaysH >= row.rent).length;
+  const nearestFmv = assumptions.fairMarketRent > 0
+    ? closestRow(rows, (row) => Math.abs(row.rent - assumptions.fairMarketRent))
+    : null;
+  const lowestNotBelowFmv = assumptions.fairMarketRent > 0
+    ? rows.find((row) => row.rent >= assumptions.fairMarketRent)
+    : null;
+  const cashBreakEven = closestRow(rows, (row) => Math.abs(row.bCashFlow));
+
+  mortgageSplitNote.textContent = `Derived non-deductible principal: ${money(assumptions.derivedPrincipal)}. Only entered interest is used in the tax illustration.`;
 
   rentSummary.innerHTML = [
-    renderSummaryCard("Lowest rent", lowestRent, `${money(lowestRent.netRental)} rental result before tax.`),
-    renderSummaryCard("Highest income", highestIncome, `${money(highestIncome.annualIncome)} annual gross rent.`),
-    renderSummaryCard("Biggest loss", biggestLoss, `${money(biggestLoss.annualProfitLoss)} annual profit/loss before tax.`),
-    renderSummaryCard("Balanced heuristic", balanced, `Score ${Math.round(balanced.balance)} / 100 from income, loss signal, fair-market gap, and B cash flow.`, "balanced")
+    renderSummaryCard("Loss rows requiring review", String(lossRows), `${lossRows} of ${rows.length} rows show a modelled loss; claimability is not determined here.`, lossRows ? "review-risk" : "neutral"),
+    nearestFmv
+      ? renderSummaryCard("Nearest entered FMV row", money(nearestFmv.rent), `Entered FMV is ${money(assumptions.fairMarketRent)}; comparables still need support.`, "neutral")
+      : renderSummaryCard("Nearest entered FMV row", "Missing", "Enter a fair-market rent estimate to assess market-risk rows.", "high-risk"),
+    lowestNotBelowFmv
+      ? renderSummaryCard("Lowest row not below FMV", money(lowestNotBelowFmv.rent), "This is a reference row, not a recommendation.", "neutral")
+      : renderSummaryCard("Lowest row not below FMV", "None", "No row in this range reaches the entered FMV estimate.", "high-risk"),
+    cashBreakEven.bCashFlow === 0
+      ? renderSummaryCard("B cash break-even row", money(cashBreakEven.rent), "This row is cash-flow neutral before tax.", "neutral")
+      : renderSummaryCard("Closest B cash break-even row", money(cashBreakEven.rent), `B cash flow is ${money(cashBreakEven.bCashFlow)}; no exact break-even row in range.`, "review-risk")
   ].join("");
 
   rentWarnings.innerHTML = [
-    `${lossRows} of ${rows.length} scenarios show a rental loss before tax.`,
+    `${lossRows} of ${rows.length} rows show a modelled loss before tax; this calculator does not decide whether any loss is claimable.`,
     belowMarketRows
-      ? `${belowMarketRows} scenarios are below the fair-market estimate and should be reviewed before relying on loss treatment.`
-      : "No scenarios are below the fair-market estimate entered here.",
-    hNegativeRows
-      ? `${hNegativeRows} scenarios show H net cost below zero because B pays H more than rent.`
-      : "B-to-H payment is modeled separately from rent and does not change reported gross rent."
+      ? `${belowMarketRows} rows are below the entered FMV and require professional review.`
+      : "No row is below the entered FMV; comparables and relationship facts still matter.",
+    circularRows
+      ? `${circularRows} rows are high-risk circular-flow rows because B pays H at least as much as rent.`
+      : "B-to-H payments are shown separately only for arithmetic; documentation still matters.",
+    assumptions.ownerPaysUtilities
+      ? "Utilities are included in the tax illustration because owner-pays-utilities is set to yes."
+      : "Utilities are excluded from the tax illustration because owner-pays-utilities is set to no."
   ].map((warning) => `<p>${warning}</p>`).join("");
 
+  document.querySelectorAll("[data-rent-sort]").forEach((button) => {
+    const active = button.dataset.rentSort === rentSort.key;
+    button.classList.toggle("sort-active", active);
+    button.setAttribute("aria-sort", active ? (rentSort.direction === "asc" ? "ascending" : "descending") : "none");
+  });
+
   rentScenarioTable.innerHTML = sortedRows(rows).map((row) => `
-    <tr class="${row.rent === balanced.rent ? "balanced-row" : ""}">
-      <td><strong>${money(row.rent)}</strong><br><span class="source">${row.rent === balanced.rent ? "balanced heuristic" : "scenario"}</span></td>
-      <td>${money(row.grossIncome)}<br><span class="source">${money(row.annualIncome)} / year</span></td>
-      <td class="${row.netRental < 0 ? "negative" : "positive"}">${money(row.netRental)}<br><span class="source">${money(row.annualProfitLoss)} / year</span></td>
+    <tr class="${row.riskSeverity}-row">
+      <td><strong>${money(row.rent)}</strong><br><span class="source">scenario</span></td>
+      <td>${money(row.annualGrossRent)}<br><span class="source">reported gross only</span></td>
+      <td class="${row.taxProfitLoss < 0 ? "negative" : "positive"}">${money(row.taxProfitLoss)}<br><span class="source">${money(row.taxProfitLoss * 12)} / year</span></td>
       <td class="${row.bCashFlow < 0 ? "negative" : "positive"}">${money(row.bCashFlow)}</td>
-      <td class="${row.hNetCost < 0 ? "positive" : ""}">${money(row.hNetCost)}</td>
-      <td>${row.loanScore} / 100<br><span class="source">gross-rent indicator</span></td>
-      <td>${row.risk}</td>
+      <td class="${row.hNetCashFlow > 0 ? "risk-emphasis" : ""}">${money(row.hNetCashFlow)}<br><span class="source">B pays H minus rent</span></td>
+      <td>${money(row.grossRentAddback50)}<br><span class="source">illustration only</span></td>
+      <td class="${row.illustrativeNetRentalIncome < 0 ? "negative" : "positive"}">${money(row.illustrativeNetRentalIncome)}<br><span class="source">not lender approval</span></td>
+      <td><span class="risk-badge ${row.riskSeverity}">${row.riskSeverity}</span><br>${row.risk}</td>
     </tr>
   `).join("");
 }
@@ -289,7 +424,10 @@ document.querySelectorAll("[data-filter]").forEach((button) => {
 
 rentInputs.forEach((id) => {
   const input = document.querySelector(`#${id}`);
-  if (input) input.addEventListener("input", renderRentCalculator);
+  if (input) {
+    input.addEventListener("input", renderRentCalculator);
+    input.addEventListener("change", renderRentCalculator);
+  }
 });
 
 document.querySelectorAll("[data-rent-sort]").forEach((button) => {

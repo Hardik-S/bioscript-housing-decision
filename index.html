@@ -44,16 +44,16 @@
             <p class="label">Synthetic example defaults</p>
             <h2 id="calculatorTitle">Rent scenario calculator</h2>
           </div>
-          <p>Models B as property owner and H as renter. B pays H separately; H pays rent back to B.</p>
+          <p>Models B as property owner and H as renter. It separates cash movement from tax and lender illustrations.</p>
         </div>
 
         <div class="caution-panel" role="note">
           <strong>Planning math only.</strong>
-          <span>Tax-loss treatment and loan qualification can depend on fair-market rent, relationship facts, lender policy, and professional review. CRA guidance warns that below-market rentals to someone known to the owner may limit rental-loss claims.</span>
+          <span>This calculator does not determine claimable rental losses, taxable income, or borrowing qualification. Below-market rent, related-party facts, repeated losses, and B-to-H side payments can change the treatment.</span>
           <div class="source-links">
-            <a href="https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/rental-income/rental-losses.html">CRA rental losses</a>
             <a href="https://www.canada.ca/en/revenue-agency/services/tax/businesses/topics/rental-income/renting-below-fair-market-value.html">CRA below fair-market rent</a>
-            <a href="https://www.canada.ca/en/revenue-agency/services/forms-publications/publications/t4036/rental-income.html">CRA rental income guide</a>
+            <a href="https://assets.cmhc-schl.gc.ca/sf/project/cmhc/pdfs/content/en/rental-income-promo-card-jun28.pdf?rev=963e6041-f383-45e3-96f5-df5e765054c9">CMHC rental income reference</a>
+            <a href="https://www.osfi-bsif.gc.ca/en/risks/real-estate-secured-lending/clarifying-osfis-guidance-rental-income-mortgage-classification">OSFI rental income clarification</a>
           </div>
         </div>
 
@@ -68,10 +68,6 @@
               <label>
                 <span>Mortgage interest</span>
                 <input id="mortgageInterest" type="number" min="0" step="50" value="2800" />
-              </label>
-              <label>
-                <span>Non-deductible principal</span>
-                <input id="mortgagePrincipal" type="number" min="0" step="50" value="1200" />
               </label>
               <p class="field-note" id="mortgageSplitNote"></p>
             </fieldset>
@@ -91,8 +87,16 @@
                 <input id="maintenanceFees" type="number" min="0" step="25" value="350" />
               </label>
               <label>
-                <span>Repairs reserve</span>
-                <input id="repairsReserve" type="number" min="0" step="25" value="250" />
+                <span>Actual current repairs</span>
+                <input id="actualRepairs" type="number" min="0" step="25" value="150" />
+              </label>
+              <label>
+                <span>Future repair reserve</span>
+                <input id="repairReserve" type="number" min="0" step="25" value="250" />
+              </label>
+              <label>
+                <span>Capital repairs / improvements</span>
+                <input id="capitalRepairs" type="number" min="0" step="25" value="0" />
               </label>
               <label>
                 <span>Utilities</span>
@@ -105,6 +109,29 @@
             </fieldset>
 
             <fieldset>
+              <legend>Eligibility assumptions</legend>
+              <label>
+                <span>Rental-use percentage</span>
+                <input id="rentalUsePct" type="number" min="0" max="100" step="5" value="100" />
+              </label>
+              <label>
+                <span>Months available for rent</span>
+                <input id="availableMonths" type="number" min="0" max="12" step="1" value="12" />
+              </label>
+              <label>
+                <span>Ownership share percentage</span>
+                <input id="ownershipShare" type="number" min="0" max="100" step="5" value="100" />
+              </label>
+              <label>
+                <span>Owner pays utilities?</span>
+                <select id="ownerPaysUtilities">
+                  <option value="yes" selected>Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </label>
+            </fieldset>
+
+            <fieldset>
               <legend>Relationship cash flows</legend>
               <label>
                 <span>B pays H</span>
@@ -113,6 +140,25 @@
               <label>
                 <span>Fair-market rent estimate</span>
                 <input id="fairMarketRent" type="number" min="0" step="100" value="3200" />
+              </label>
+              <label>
+                <span>Tenant relationship</span>
+                <select id="tenantRelationship">
+                  <option value="unknown" selected>Unknown</option>
+                  <option value="unrelated">Unrelated</option>
+                  <option value="known">Known</option>
+                  <option value="related">Related</option>
+                </select>
+              </label>
+              <label>
+                <span>B-to-H payment purpose</span>
+                <select id="bPaysHPurpose">
+                  <option value="unknown" selected>Unknown</option>
+                  <option value="unrelated-support">Unrelated support</option>
+                  <option value="service-payment">Service payment</option>
+                  <option value="reimbursement">Reimbursement</option>
+                  <option value="rent-subsidy">Rent subsidy</option>
+                </select>
               </label>
             </fieldset>
 
@@ -145,12 +191,13 @@
             <thead>
               <tr>
                 <th><button data-rent-sort="rent" type="button">Rent</button></th>
-                <th><button data-rent-sort="grossIncome" type="button">Gross income</button></th>
-                <th><button data-rent-sort="netRental" type="button">Rental profit/loss</button></th>
+                <th><button data-rent-sort="annualGrossRent" type="button">Annual gross rent</button></th>
+                <th><button data-rent-sort="taxProfitLoss" type="button">Tax profit/loss before tax</button></th>
                 <th><button data-rent-sort="bCashFlow" type="button">B net cash flow</button></th>
-                <th><button data-rent-sort="hNetCost" type="button">H net cost</button></th>
-                <th><button data-rent-sort="loanScore" type="button">Loan-usefulness score</button></th>
-                <th>Risk flag</th>
+                <th><button data-rent-sort="hNetCashFlow" type="button">H net monthly cash flow</button></th>
+                <th><button data-rent-sort="grossRentAddback50" type="button">Illustrative 50% addback</button></th>
+                <th><button data-rent-sort="illustrativeNetRentalIncome" type="button">Illustrative net rent</button></th>
+                <th><button data-rent-sort="riskRank" type="button">Evidence / risk status</button></th>
               </tr>
             </thead>
             <tbody id="rentScenarioTable"></tbody>
