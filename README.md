@@ -13,6 +13,7 @@ Decision packet and static web companion for comparing solo, 2-person, and 3-per
 ## Design decisions
 
 - The PDF uses fixed catalog cards, not auto-flowing text boxes. Every card field has a line cap to prevent overflow.
+- Line caps only add ellipses when text actually overflows the field. Exact two-line or three-line fits stay literal so rent, risk, and address notes are not made to look incomplete.
 - The site is static on purpose: no backend, no auth, no scraping, and no database. Listing availability changes quickly, so the packet should be treated as a decision aid, not a live MLS clone.
 - Real listing photos are cached locally so the PDF and site do not break if listing portals block hotlinking.
 - Public repo is acceptable because the content is based on public rental listings and contains no credentials, private phone numbers, or application documents.
@@ -23,6 +24,12 @@ Regenerate the PDF:
 
 ```powershell
 python .\housing_packet\build_housing_packet_clean.py
+```
+
+Run the focused text-wrap regression:
+
+```powershell
+python -m unittest tests.test_text_wrapping -v
 ```
 
 Render PDF pages for visual QA:
