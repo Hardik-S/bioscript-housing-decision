@@ -4,7 +4,7 @@ Decision packet and static web companion for comparing solo, 2-person, and 3-per
 
 ## What is in this repo
 
-- `index.html`, `styles.css`, `app.js`: static Vercel-ready housing comparison site with an editable rent scenario calculator.
+- `index.html`, `housing.html`, `styles.css`, `app.js`: static Vercel-ready site with the rent calculator as the landing page and the housing packet under `/housing`.
 - `housing_packet/BioScript_Housing_Decision_Packet.pdf`: 8-page PDF packet.
 - `housing_packet/build_housing_packet.py`: source listing data and image download helper.
 - `housing_packet/build_housing_packet_clean.py`: current PDF generator.
@@ -20,6 +20,7 @@ Decision packet and static web companion for comparing solo, 2-person, and 3-per
 - The calculator derives non-deductible principal from the mortgage payment and entered interest so it does not imply the whole mortgage payment is automatically deductible. It shows planning math only, not tax, legal, accounting, or lending advice.
 - The scenario table is intentionally exploratory instead of prescriptive: it compares rent levels from CAD 0-4,000/month and flags below-market, circular-flow, missing-evidence, and loss-producing rows for professional review.
 - The calculator does not recommend a rent value. It shows neutral reference rows such as nearest entered fair-market rent, lowest row not below entered fair-market rent, and closest B cash break-even row.
+- The landing page is the calculator because that is the decision workflow. The listing packet remains available as a separate route at `/housing`.
 
 ## Rent calculator references
 

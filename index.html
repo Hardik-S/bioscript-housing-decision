@@ -3,48 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BioScript Mississauga Housing Packet</title>
+    <title>Saga Housing Decision</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <header class="app-header">
       <div>
-        <p class="label">Updated May 13, 2026</p>
-        <h1>BioScript Mississauga Housing Packet</h1>
-        <p class="subtitle">A dense, practical comparison of housing options near Ridgeway/Dunwin, plus an editable rent scenario calculator for owner/renter planning.</p>
+        <p class="label">Planning tool</p>
+        <h1>Saga Housing Decision</h1>
+        <p class="subtitle">An editable rent scenario calculator for owner/renter planning. It separates cash movement from tax and lender illustrations.</p>
       </div>
       <div class="header-actions">
-        <a class="button" href="./housing_packet/BioScript_Housing_Decision_Packet.pdf">Open PDF</a>
-        <button class="button secondary" id="printBtn" type="button">Print</button>
+        <nav class="page-tabs" aria-label="Site sections">
+          <a class="tab active" href="/">Calculator</a>
+          <a class="tab" href="/housing">Housing packet</a>
+        </nav>
       </div>
     </header>
 
     <main>
-      <section class="decision-strip" aria-label="Decision summary">
-        <article>
-          <span>Best fit</span>
-          <strong>3-person house-style rental</strong>
-          <p>Best chance of a yard, greenery, and enough space for the cat.</p>
-        </article>
-        <article>
-          <span>Best fallback</span>
-          <strong>2-person with brother</strong>
-          <p>Cleaner budget and privacy balance if cousin is uncertain.</p>
-        </article>
-        <article>
-          <span>Solo reality</span>
-          <strong>$1,200 means shared-house territory</strong>
-          <p>Keep solo only for unusually strong cat-friendly room/basement leads.</p>
-        </article>
-      </section>
-
-      <section class="calculator" aria-labelledby="calculatorTitle">
+      <section class="calculator landing-calculator" aria-labelledby="calculatorTitle">
         <div class="section-heading">
           <div>
             <p class="label">Synthetic example defaults</p>
             <h2 id="calculatorTitle">Rent scenario calculator</h2>
           </div>
-          <p>Models B as property owner and H as renter. It separates cash movement from tax and lender illustrations.</p>
+          <p>Models B as property owner and H as renter. It does not recommend a rent value.</p>
         </div>
 
         <div class="caution-panel" role="note">
@@ -201,45 +185,6 @@
               </tr>
             </thead>
             <tbody id="rentScenarioTable"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="controls" aria-label="Listing filters">
-        <div class="segmented" role="tablist" aria-label="Household size">
-          <button class="active" data-filter="all" type="button">All</button>
-          <button data-filter="3-person" type="button">3-person</button>
-          <button data-filter="2-person" type="button">2-person</button>
-          <button data-filter="solo" type="button">Solo</button>
-        </div>
-        <label class="toggle"><input id="shortlistOnly" type="checkbox" /> shortlist only</label>
-      </section>
-
-      <section>
-        <div class="section-heading">
-          <h2>Dense listing grid</h2>
-          <p>Every card has fixed image sizing and line clamps. Longer notes stay in source links or the comparison table.</p>
-        </div>
-        <div id="listingGrid" class="listing-grid"></div>
-      </section>
-
-      <section>
-        <div class="section-heading">
-          <h2>Comparison table</h2>
-          <p>Use this for quick ranking before messaging landlords.</p>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Listing</th>
-                <th>Scenario</th>
-                <th>Rent</th>
-                <th>Area</th>
-                <th>Risk check</th>
-              </tr>
-            </thead>
-            <tbody id="listingTable"></tbody>
           </table>
         </div>
       </section>

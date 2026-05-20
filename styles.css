@@ -66,6 +66,26 @@ h1 {
   flex-shrink: 0;
 }
 
+.page-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tab {
+  border: 1px solid #d7e6da;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #eef5ef;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.tab.active {
+  background: #eef5ef;
+  color: #10211a;
+}
+
 .button {
   border: 1px solid #d7e6da;
   border-radius: 8px;
@@ -130,6 +150,10 @@ main {
 
 .calculator {
   margin: 0 0 32px;
+}
+
+.landing-calculator {
+  margin-top: 0;
 }
 
 .caution-panel,
@@ -583,6 +607,16 @@ td {
   .controls {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .header-actions,
+  .page-tabs {
+    width: 100%;
+  }
+
+  .tab,
+  .button {
+    text-align: center;
   }
 
   .decision-strip {

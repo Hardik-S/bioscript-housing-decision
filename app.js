@@ -375,6 +375,7 @@ function tagClass(scenario) {
 }
 
 function filteredListings() {
+  if (!shortlistOnly) return listings;
   return listings.filter((listing) => {
     const scenarioMatch = activeFilter === "all" || listing.scenario === activeFilter;
     const shortlistMatch = !shortlistOnly.checked || listing.shortlist;
@@ -383,6 +384,7 @@ function filteredListings() {
 }
 
 function render() {
+  if (!grid || !table) return;
   const current = filteredListings();
   grid.innerHTML = current.map((listing) => `
     <article class="listing-card">
@@ -441,7 +443,8 @@ document.querySelectorAll("[data-rent-sort]").forEach((button) => {
   });
 });
 
-shortlistOnly.addEventListener("change", render);
-document.querySelector("#printBtn").addEventListener("click", () => window.print());
+if (shortlistOnly) shortlistOnly.addEventListener("change", render);
+const printBtn = document.querySelector("#printBtn");
+if (printBtn) printBtn.addEventListener("click", () => window.print());
 renderRentCalculator();
 render();
